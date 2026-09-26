@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+redis
+celery
+flower
+httpx
+pydantic-settings
+pytest

@@ -1,0 +1,57 @@
+{
+  "info": {
+    "name": "Day 8 - Async Redis Celery API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": "http://127.0.0.1:8000/health"
+      }
+    },
+    {
+      "name": "Async Concurrent Fetch",
+      "request": {
+        "method": "GET",
+        "url": "http://127.0.0.1:8000/async-fetch?urls=https://example.com,https://httpbin.org/get"
+      }
+    },
+    {
+      "name": "Cache",
+      "request": {
+        "method": "GET",
+        "url": "http://127.0.0.1:8000/cached-data?key=sample"
+      }
+    },
+    {
+      "name": "Invalidate Cache",
+      "request": {
+        "method": "DELETE",
+        "url": "http://127.0.0.1:8000/cached-data/sample"
+      }
+    },
+    {
+      "name": "Background Task",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/background-task?message=postman-test"
+      }
+    },
+    {
+      "name": "Queue Celery Task",
+      "request": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/celery-task?report_name=postman-report"
+      }
+    },
+    {
+      "name": "Celery Task Status",
+      "request": {
+        "method": "GET",
+        "url": "http://127.0.0.1:8000/celery-task/{{task_id}}"
+      }
+    }
+  ]
+}
