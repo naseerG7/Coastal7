@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Day 9 Realtime Notifications</title>
+</head>
+<body>
+  <h1>Day 9 FastAPI Realtime Demo</h1>
+  <input id="file" type="file" accept="image/*">
+  <button onclick="upload()">Upload</button>
+  <ul id="events"></ul>
+  <script>
+    const events = document.getElementById("events");
+    const ws = new WebSocket(`ws://${location.host}/ws/notifications`);
+    ws.onmessage = (event) => {
+      const li = document.createElement("li");
+      li.textContent = JSON.stringify(JSON.parse(event.data));
+      events.prepend(li);
+    };
+
+    async function upload() {
+      const input = document.getElementById("file");
+      if (!input.files.length) return;
+      const form = new FormData();
+      form.append("file", input.files[0]);
+      const response = await fetch("/api/upload", { method: "POST", body: form });
+      const data = await response.json();
+      const li = document.createElement("li");
+      li.textContent = JSON.stringify(data);
+      events.prepend(li);
+    }
+  </script>
+</body>
+</html>
