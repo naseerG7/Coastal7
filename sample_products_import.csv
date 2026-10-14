@@ -1,0 +1,14 @@
+name,category,description,price,stock,image_url
+Samsung Galaxy S24 Ultra,Mobiles,Flagship smartphone with 200MP camera and S-Pen,129999.00,25,/product_images/s24.jpg
+Apple iPhone 15 Pro,Mobiles,Titanium design with A17 Pro chip and Action button,134900.00,20,/product_images/iphone15.jpg
+OnePlus 12 5G,Mobiles,Snapdragon 8 Gen 3 with 5400mAh battery and Hasselblad camera,64999.00,35,/product_images/oneplus12.jpg
+Sony WH-1000XM5 Wireless Headphones,Electronics,Industry leading noise canceling headphones with 30hr battery,29990.00,40,/product_images/sony_xm5.jpg
+Apple MacBook Air M3,Electronics,13.6-inch Liquid Retina Display with 8-core CPU and 16GB RAM,114900.00,15,/product_images/macbook_air.jpg
+Logitech MX Master 3S Mouse,Electronics,Ergonomic wireless mouse with 8K DPI track-on-glass sensor,9995.00,50,/product_images/logitech_mouse.jpg
+Levi's Men's Slim Fit Jeans,Fashion,Classic premium denim with comfortable stretch,2799.00,60,/product_images/levis_jeans.jpg
+Nike Air Zoom Pegasus 40,Fashion,Lightweight and responsive road running shoes,10495.00,30,/product_images/nike_pegasus.jpg
+Sony PlayStation 5 Slim Console,Gaming,Next-gen gaming console with 1TB SSD and DualSense wireless controller,54990.00,18,/product_images/ps5.jpg
+Nintendo Switch OLED Model,Gaming,7-inch OLED screen with vibrant colors and enhanced audio,31999.00,22,/product_images/switch.jpg
+Philips Digital Air Fryer,Home & Kitchen,Rapid Air Technology for 90 percent less fat cooking,8999.00,45,/product_images/air_fryer.jpg
+Instant Pot Duo 7-in-1 Electric Pressure Cooker,Home & Kitchen,Multi-functional cooker: slow cooker rice cooker steamer,7499.00,28,/product_images/instant_pot.jpg
+
