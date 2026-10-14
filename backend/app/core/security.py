@@ -1,10 +1,20 @@
+
 import os
 from datetime import datetime, timedelta, timezone
+
+from pathlib import Path
+from dotenv import load_dotenv
 import jwt
+
+BACKEND_ENV = Path(__file__).resolve().parents[2] / ".env"
+load_dotenv(BACKEND_ENV)
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
 
-SECRET_KEY = os.getenv("SECRET_KEY", "change-this-secret-key-for-development")
+SECRET_KEY = os.getenv("SECRET_KEY")
+
+if not SECRET_KEY or len(SECRET_KEY.encode("utf-8")) < 32:
+    raise RuntimeError("SECRET_KEY must be configured with at least 32 bytes.")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 

@@ -1,0 +1,92 @@
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
+from groq import APIConnectionError, RateLimitError
+
+from app.core.dependencies import get_current_customer
+from app.core.rate_limiter import AI_RATE_LIMIT, limiter
+from app.models import User
+from app.ai.groq_service import generate_reply, generate_reply_stream
+
+
+router = APIRouter(prefix="/ai", tags=["AI Assistant"])
+
+
+class ChatRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=2000)
+
+
+class ChatResponse(BaseModel):
+    reply: str
+
+
+
+@router.post("/chat", response_model=ChatResponse)
+@limiter.limit(AI_RATE_LIMIT)
+async def chat(
+    request: Request,
+    chat_request: ChatRequest,
+    current_user: User = Depends(get_current_customer),
+):
+    try:
+        reply = await generate_reply(chat_request.message)
+        return ChatResponse(reply=reply)
+
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    except RateLimitError as exc:
+        raise HTTPException(
+            status_code=429,
+            detail="The AI service is busy. Please try again shortly.",
+        ) from exc
+
+    except APIConnectionError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Could not connect to the AI service.",
+        ) from exc
+
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="The AI service is temporarily unavailable.",
+        ) from exc
+    
+@router.post("/chat/stream")
+@limiter.limit(AI_RATE_LIMIT)
+async def chat_stream(
+    request: Request,
+    chat_request: ChatRequest,
+    current_user: User = Depends(get_current_customer),
+):
+    async def event_stream():
+        try:
+            async for text in generate_reply_stream(chat_request.message):
+                # SSE requires each event to end with a blank line.
+                safe_text = (
+                    text.replace("\\", "\\\\")
+                    .replace("\r", "\\r")
+                    .replace("\n", "\\n")
+                )
+                yield f"data: {safe_text}\n\n"
+
+            yield "event: done\ndata: [DONE]\n\n"
+
+        except ValueError:
+            yield "event: error\ndata: Invalid message.\n\n"
+
+        except Exception:
+            yield (
+                "event: error\n"
+                "data: The AI service is temporarily unavailable.\n\n"
+            )
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )

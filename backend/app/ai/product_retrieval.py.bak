@@ -1,0 +1,156 @@
+
+import re
+
+from sqlalchemy import or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models import Product
+
+
+STOP_WORDS = {
+    "a", "an", "the", "is", "are", "do", "does", "i", "me",
+    "my", "you", "your", "we", "our", "please", "show", "find",
+    "get", "want", "need", "have", "has", "for", "to", "of",
+    "in", "on", "with", "and", "or", "what", "which", "can",
+    "could", "would", "should", "tell", "about", "shopflow",
+    "product", "products", "price", "cost", "stock", "available",
+    "availability", "buy", "purchase", "recommend", "recommendation",
+    "category", "categories", "cheap", "cheapest", "expensive",
+    "under", "below", "less", "than", "up", "upto", "within",
+    "above", "over", "more", "between", "maximum", "minimum",
+    "show", "me", "some", "any", "best", "please",
+}
+
+PRODUCT_INTENT = re.compile(
+    r"\b(product|products|price|cost|stock|available|availability|"
+    r"buy|purchase|recommend|recommendation|category|categories|"
+    r"cheap|cheapest|expensive|gaming|mobile|mobiles|electronics|"
+    r"fashion|laptop|phone|watch|under|below|above|between|"
+    r"in stock|out of stock|home|kitchen)\b",
+    re.IGNORECASE,
+)
+
+MAX_PRICE = re.compile(
+    r"\b(?:under|below|less than|up to|upto|within|max(?:imum)?)"
+    r"\s*(?:₹|rs\.?|inr)?\s*([\d,]+)",
+    re.IGNORECASE,
+)
+
+MIN_PRICE = re.compile(
+    r"\b(?:above|over|more than|at least|minimum|min)"
+    r"\s*(?:₹|rs\.?|inr)?\s*([\d,]+)",
+    re.IGNORECASE,
+)
+
+CATEGORIES = [
+    "mobiles",
+    "electronics",
+    "fashion",
+    "home & kitchen",
+    "gaming",
+]
+
+
+async def retrieve_product_context(
+    message: str,
+    db: AsyncSession,
+) -> str | None:
+    """Retrieve relevant live products for shopping-related questions."""
+
+    if not PRODUCT_INTENT.search(message):
+        return None
+
+    statement = select(Product)
+    normalized = message.lower()
+
+    max_match = MAX_PRICE.search(normalized)
+    min_match = MIN_PRICE.search(normalized)
+
+    if max_match:
+        max_price = float(max_match.group(1).replace(",", ""))
+        statement = statement.where(Product.price <= max_price)
+
+    if min_match:
+        min_price = float(min_match.group(1).replace(",", ""))
+        statement = statement.where(Product.price >= min_price)
+
+    matched_category = next(
+        (
+            category
+            for category in CATEGORIES
+            if category in normalized
+        ),
+        None,
+    )
+
+    if matched_category:
+        statement = statement.where(
+            Product.category.ilike(f"%{matched_category}%")
+        )
+
+    cleaned = re.sub(r"₹|rs\.?|inr", " ", normalized)
+    cleaned = re.sub(r"\d[\d,]*(?:\.\d+)?", " ", cleaned)
+
+    keywords = [
+        word
+        for word in re.findall(r"[a-zA-Z][a-zA-Z0-9-]*", cleaned)
+        if word not in STOP_WORDS and len(word) >= 2
+    ]
+
+    if keywords:
+        conditions = []
+
+        for word in keywords[:8]:
+            pattern = f"%{word}%"
+            conditions.extend([
+                Product.name.ilike(pattern),
+                Product.category.ilike(pattern),
+                Product.description.ilike(pattern),
+            ])
+
+        statement = statement.where(or_(*conditions))
+
+    statement = statement.order_by(Product.id.asc()).limit(8)
+
+    result = await db.execute(statement)
+    products = result.scalars().all()
+
+    if not products:
+        return (
+            "No matching products were found in the live ShopFlow catalog. "
+            "Do not invent products, prices, stock, or availability. "
+            "Explain that no matching items were found and suggest "
+            "adjusting the search or filters."
+        )
+
+    lines = [
+        "The following products were retrieved from the live ShopFlow "
+        "database. Use only these records for product-specific facts:"
+    ]
+
+    for product in products:
+        description = (
+            product.description.strip()
+            if product.description
+            else "No description provided"
+        )
+
+        stock_status = (
+            f"{product.stock} units in stock"
+            if product.stock > 0
+            else "Out of stock"
+        )
+
+        lines.append(
+            f"- ID: {product.id} | Name: {product.name} | "
+            f"Category: {product.category} | "
+            f"Price: ₹{product.price} | Stock: {stock_status} | "
+            f"Description: {description}"
+        )
+
+    lines.append(
+        "Do not claim that these results represent every product in the "
+        "catalog. If the requested detail is missing, say so."
+    )
+
+    return "\n".join(lines)

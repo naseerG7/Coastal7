@@ -1,0 +1,176 @@
+import os
+
+from dotenv import load_dotenv
+from groq import AsyncGroq
+from google import genai
+from google.genai import types
+
+# Load the existing backend environment file.
+BACKEND_ENV = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "../../.env")
+)
+load_dotenv(BACKEND_ENV)
+
+groq_api_key = os.getenv("GROQ_API_KEY")
+gemini_api_key = os.getenv("GEMINI_API_KEY")
+
+if not groq_api_key:
+    raise RuntimeError(
+        "GROQ_API_KEY is missing. Check your backend .env file."
+    )
+
+groq_client = AsyncGroq(api_key=groq_api_key)
+
+# Gemini is optional, so ShopFlow can still start with Groq alone.
+gemini_client = (
+    genai.Client(api_key=gemini_api_key)
+    if gemini_api_key
+    else None
+)
+
+SYSTEM_PROMPT = (
+    "You are ShopFlow's helpful shopping assistant. "
+    "Help customers with product questions and shopping. "
+    "Do not invent product prices, stock, or order details. "
+    "When live ShopFlow data is unavailable, say so clearly."
+)
+
+async def generate_reply(message: str) -> str:
+    """Generate a complete reply using Groq, with Gemini fallback."""
+    message = message.strip()
+
+    if not message:
+        raise ValueError("Message cannot be empty.")
+
+    try:
+        response = await groq_client.chat.completions.create(
+            model="openai/gpt-oss-120b",
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": message},
+            ],
+            temperature=0.3,
+            max_tokens=500,
+        )
+
+        answer = response.choices[0].message.content
+        if answer:
+            return answer
+
+        raise RuntimeError("Groq returned an empty response.")
+
+    except Exception as groq_error:
+        print(
+            f"Groq request failed ({type(groq_error).__name__}). "
+            "Trying Gemini fallback."
+        )
+
+    if gemini_client is None:
+        raise RuntimeError(
+            "Groq failed and Gemini is not configured."
+        )
+
+    try:
+        response = await gemini_client.aio.models.generate_content(
+            model="gemini-flash-latest",
+            contents=(
+                f"{SYSTEM_PROMPT}\n\n"
+                f"Customer message: {message}"
+            ),
+            config=types.GenerateContentConfig(
+                temperature=0.3,
+                max_output_tokens=500,
+            ),
+        )
+
+        answer = response.text
+        if answer:
+            return answer
+
+        raise RuntimeError("Gemini returned an empty response.")
+
+    except Exception as gemini_error:
+        print(
+            f"Gemini fallback failed ({type(gemini_error).__name__})."
+        )
+        raise RuntimeError(
+            "Both AI providers are temporarily unavailable."
+        ) from gemini_error
+
+
+
+async def generate_reply_stream(message: str):
+    """Stream response text from Groq, falling back to Gemini if needed."""
+    message = message.strip()
+
+    if not message:
+        raise ValueError("Message cannot be empty.")
+
+    groq_sent_text = False
+
+    try:
+        stream = await groq_client.chat.completions.create(
+            model="openai/gpt-oss-120b",
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": message},
+            ],
+            temperature=0.3,
+            max_tokens=500,
+            stream=True,
+        )
+
+        async for chunk in stream:
+            text = chunk.choices[0].delta.content
+            if text:
+                groq_sent_text = True
+                yield text
+
+        if groq_sent_text:
+            return
+
+        raise RuntimeError("Groq returned an empty stream.")
+
+    except Exception as groq_error:
+        if groq_sent_text:
+            # Do not switch providers after partial output.
+            raise RuntimeError(
+                "Groq streaming stopped unexpectedly."
+            ) from groq_error
+
+        print(
+            f"Groq streaming failed ({type(groq_error).__name__}). "
+            "Trying Gemini fallback."
+        )
+
+    if gemini_client is None:
+        raise RuntimeError(
+            "Groq streaming failed and Gemini is not configured."
+        )
+
+    try:
+        stream = await gemini_client.aio.models.generate_content_stream(
+            model="gemini-flash-latest",
+            contents=(
+                f"{SYSTEM_PROMPT}\n\n"
+                f"Customer message: {message}"
+            ),
+            config=types.GenerateContentConfig(
+                temperature=0.3,
+                max_output_tokens=500,
+            ),
+        )
+
+        async for chunk in stream:
+            if chunk.text:
+                yield chunk.text
+
+    except Exception as gemini_error:
+        print(
+            f"Gemini streaming failed "
+            f"({type(gemini_error).__name__})."
+        )
+        raise RuntimeError(
+            "Both AI streaming providers are unavailable."
+        ) from gemini_error
+

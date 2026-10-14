@@ -1,0 +1,49 @@
+import os
+
+from dotenv import load_dotenv
+from groq import AsyncGroq
+
+# Load the backend environment file.
+BACKEND_ENV = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "../../.env")
+)
+load_dotenv(BACKEND_ENV)
+
+api_key = os.getenv("GROQ_API_KEY")
+
+if not api_key:
+    raise RuntimeError(
+        "GROQ_API_KEY is missing. Check your backend .env file."
+    )
+
+client = AsyncGroq(api_key=api_key)
+
+
+async def generate_reply(message: str) -> str:
+    """Generate an AI response using Groq."""
+    message = message.strip()
+
+    if not message:
+        raise ValueError("Message cannot be empty.")
+
+    response = await client.chat.completions.create(
+        model="openai/gpt-oss-120b",
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are ShopFlow's helpful shopping assistant. "
+                    "Help customers with product questions and shopping. "
+                    "Do not invent product prices, stock, or order details. "
+                    "When live ShopFlow data is unavailable, say so clearly."
+                ),
+            },
+            {"role": "user", "content": message},
+        ],
+        temperature=0.3,
+        max_tokens=500,
+    )
+
+    answer = response.choices[0].message.content
+
+    return answer or "Sorry, I couldn't generate a response."

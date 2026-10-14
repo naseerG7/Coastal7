@@ -1,0 +1,197 @@
+.image-dropzone {
+  width: 100%;
+  margin: 16px 0;
+  color: #1f2937;
+  font-family: inherit;
+}
+
+.image-dropzone-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.image-dropzone-heading h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.image-dropzone-heading > span {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.image-dropzone-area {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 210px;
+  padding: 24px 16px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
+  text-align: center;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.image-dropzone-area.is-dragging {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.image-dropzone-area.is-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.image-dropzone-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.image-dropzone-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.image-dropzone-title {
+  margin: 12px 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.image-dropzone-description {
+  margin: 0 0 14px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.image-dropzone-browse {
+  padding: 9px 16px;
+  border: 1px solid #2563eb;
+  border-radius: 7px;
+  background: #2563eb;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.image-dropzone-browse:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.image-dropzone-browse:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.image-dropzone-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.image-dropzone-card {
+  position: relative;
+  min-width: 0;
+  padding: 9px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: white;
+}
+
+.image-dropzone-card img {
+  display: block;
+  width: 100%;
+  height: 120px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.image-dropzone-primary {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 7px;
+  border-radius: 4px;
+  background: #dbeafe;
+  color: #1e40af;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.image-dropzone-card p {
+  margin: 8px 0 3px;
+  overflow: hidden;
+  color: #374151;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.image-dropzone-size {
+  display: block;
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.image-dropzone-remove {
+  width: 100%;
+  margin-top: 9px;
+  padding: 7px;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  background: #fff;
+  color: #b91c1c;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.image-dropzone-remove:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+.image-dropzone-remove:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.image-dropzone-errors {
+  margin: 12px 0;
+  padding: 10px 10px 10px 28px;
+  border-radius: 7px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 12px;
+}
+
+@media (max-width: 480px) {
+  .image-dropzone-area {
+    min-height: 190px;
+    padding: 18px 10px;
+  }
+
+  .image-dropzone-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

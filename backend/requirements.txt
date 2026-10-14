@@ -10,3 +10,10 @@ python-multipart
 pillow
 passlib[bcrypt]
 PyJWT
+celery
+redis
+reportlab
+groq
+google-genai
+groq
+google-genai

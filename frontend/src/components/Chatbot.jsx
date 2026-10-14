@@ -1,0 +1,460 @@
+import { useEffect, useRef, useState } from "react";
+import api from "../services/api";
+import "./Chatbot.css";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { getProducts } from "../services/productService";
+import ChatbotProductResults from "./ChatbotProductResults";
+
+function detectProductSearch(question) {
+  const productIntent =
+    /\b(recommend|recommendation|suggest|show|find|search|looking for|browse|compare|buy|products?|under|below|budget|laptop|phone|mobile|headphones|earbuds|smartwatch|watch|speaker|tv|camera|shoes|gaming|keyboard|mouse|dress|jacket|backpack|tablet|monitor|electronics|fashion|furniture)\b/i;
+
+  return productIntent.test(question);
+}
+
+function extractProductSearchTerm(question) {
+  return question
+    .replace(/₹\s?[\d,]+(?:\.\d{1,2})?/g, " ")
+    .replace(/\b(?:rs\.?|inr)\s?[\d,]+(?:\.\d{1,2})?/gi, " ")
+    .replace(/\b(?:under|below|less than|maximum|max|budget|price|cost|cheap|cheapest|affordable|recommend|recommendation|suggest|show|find|search|looking for|browse|buy|me|some|the|a|an|please|products?|compare)\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function FridayLogo({ color = "green", size = 52 }) {
+  const glow = color === "red" ? "#ff2638" : "#42f57b";
+  const core = color === "red" ? "#ff0026" : "#b7e52a";
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
+      role="img"
+      aria-label={`FRIDAY ${color} logo`}
+    >
+      <circle
+        cx="50"
+        cy="50"
+        r="45"
+        fill="#080d10"
+        stroke={glow}
+        strokeWidth="4"
+      />
+      <circle
+        cx="50"
+        cy="50"
+        r="36"
+        fill="#10191d"
+        stroke="#78878b"
+        strokeWidth="7"
+      />
+      <path
+        d="M50 18 L68 40 L50 50 L32 40 Z M50 50 L68 60 L50 82 L32 60 Z"
+        fill={core}
+      />
+      <path
+        d="M50 5 V17 M50 83 V95 M5 50 H17 M83 50 H95"
+        stroke={glow}
+        strokeWidth="3"
+      />
+    </svg>
+  );
+}
+
+export default function Chatbot() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [message, setMessage] = useState("");
+  const abortControllerRef = useRef(null);
+
+  const [messages, setMessages] = useState(() => {
+    const welcomeMessage = {
+      role: "assistant",
+      content:
+        "Hi! I'm ShopFlow AI. Ask me about shopping or our products.",
+    };
+
+    try {
+      const savedMessages = sessionStorage.getItem("shopflow_chat_messages");
+
+      if (savedMessages) {
+        const parsedMessages = JSON.parse(savedMessages);
+
+        if (
+          Array.isArray(parsedMessages) &&
+          parsedMessages.every(
+            (item) =>
+              item &&
+              ["user", "assistant"].includes(item.role) &&
+              typeof item.content === "string"
+          )
+        ) {
+          return parsedMessages;
+        }
+      }
+    } catch (error) {
+      console.error("Could not restore chat history:", error);
+    }
+
+    return [welcomeMessage];
+  });
+
+  const [isSending, setIsSending] = useState(false);
+
+  const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
+
+  // Reset the conversation when the authenticated account changes.
+  useEffect(() => {
+    const handleAuthChange = () => {
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = null;
+
+      sessionStorage.removeItem("shopflow_chat_messages");
+
+      setMessage("");
+      setIsOpen(false);
+      setIsSending(false);
+      setMessages([
+        {
+          role: "assistant",
+          content:
+            "Hi! I'm Friday, your ShopFlow Shopping Assistant. How can I help you today?",
+        },
+      ]);
+    };
+
+    window.addEventListener("shopflow-auth-changed", handleAuthChange);
+
+    return () => {
+      window.removeEventListener(
+        "shopflow-auth-changed",
+        handleAuthChange
+      );
+
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isOpen]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        "shopflow_chat_messages",
+        JSON.stringify(messages)
+      );
+    } catch (error) {
+      console.error("Could not save chat history:", error);
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    if (isOpen) inputRef.current?.focus();
+  }, [isOpen]);
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+
+    const question = message.trim();
+    if (!question || isSending) return;
+
+    const token = localStorage.getItem("access_token");
+
+    if (!token) {
+      setMessages((previous) => [
+        ...previous,
+        { role: "user", content: question },
+        {
+          role: "assistant",
+          content: "Please log in to ShopFlow before using the AI assistant.",
+        },
+      ]);
+
+      setMessage("");
+      return;
+    }
+
+    setMessage("");
+    setIsSending(true);
+
+    setMessages((previous) => [
+      ...previous,
+      { role: "user", content: question },
+      { role: "assistant", content: "" },
+    ]);
+
+    let answer = "";
+
+    function updateAnswer(text) {
+      answer += text;
+
+      setMessages((previous) => {
+        const updated = [...previous];
+        const lastIndex = updated.length - 1;
+
+        updated[lastIndex] = {
+          ...updated[lastIndex],
+          content: answer,
+        };
+
+        return updated;
+      });
+    }
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    try {
+      const response = await fetch(
+        `${api.defaults.baseURL}/ai/chat/stream`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ message: question }),
+          signal: controller.signal,
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error("Please log in again to use ShopFlow AI.");
+        }
+
+        throw new Error(
+          `AI request failed (${response.status}). Please try again.`
+        );
+      }
+
+      if (!response.body) {
+        throw new Error("Streaming is not supported by this response.");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let streamError = "";
+
+      function processEvent(rawEvent) {
+        const lines = rawEvent.split("\n");
+
+        const eventName = lines
+          .find((line) => line.startsWith("event:"))
+          ?.slice(6)
+          .trim();
+
+        const data = lines
+          .filter((line) => line.startsWith("data:"))
+          .map((line) => line.slice(5).replace(/^ /, ""))
+          .join("\n");
+
+        if (!data || data === "[DONE]") return;
+
+        if (eventName === "error") {
+          streamError = data;
+          return;
+        }
+
+        // Receive live product data from the backend.
+        if (eventName === "sources") {
+          try {
+            const products = JSON.parse(data);
+
+            if (Array.isArray(products) && products.length > 0) {
+              setMessages((previous) => {
+                const updated = [...previous];
+                const lastIndex = updated.length - 1;
+
+                updated[lastIndex] = {
+                  ...updated[lastIndex],
+                  products,
+                };
+
+                return updated;
+              });
+            }
+          } catch (error) {
+            console.error("Could not parse AI product sources:", error);
+          }
+
+          return;
+        }
+
+        // The done event signals completion; it isn't answer text.
+        if (eventName === "done") return;
+
+        // Decode escaped newlines used by the backend SSE endpoint.
+        const decoded = data
+          .replace(/\\\\/g, "\\")
+          .replace(/\\r/g, "\r")
+          .replace(/\\n/g, "\n");
+
+        updateAnswer(decoded);
+      }
+
+      while (true) {
+        const { value, done } = await reader.read();
+
+        buffer += decoder.decode(value, { stream: !done });
+
+        let separatorIndex;
+
+        while ((separatorIndex = buffer.indexOf("\n\n")) !== -1) {
+          const rawEvent = buffer.slice(0, separatorIndex);
+          buffer = buffer.slice(separatorIndex + 2);
+          processEvent(rawEvent);
+        }
+
+        if (done) break;
+      }
+
+      if (buffer.trim()) {
+        processEvent(buffer);
+      }
+
+      if (streamError) {
+        if (answer) {
+          updateAnswer(`\n\n${streamError}`);
+        } else {
+          throw new Error(streamError);
+        }
+      }
+
+      if (!answer && !streamError) {
+        throw new Error("The AI returned an empty response. Please try again.");
+      }
+    } catch (error) {
+      // Ignore cancellation caused by logout or account switching.
+      if (error instanceof Error && error.name === "AbortError") {
+        return;
+      }
+
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Something went wrong. Please try again.";
+
+      setMessages((previous) => {
+        const updated = [...previous];
+        const lastIndex = updated.length - 1;
+
+        updated[lastIndex] = {
+          ...updated[lastIndex],
+          content: answer
+            ? `${answer}\n\n${errorMessage}`
+            : errorMessage,
+        };
+
+        return updated;
+      });
+    } finally {
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+        setIsSending(false);
+        inputRef.current?.focus();
+      }
+    }
+  }
+
+  return (
+    <div className="shopflow-chatbot">
+      {isOpen && (
+        <section
+          className="chatbot-panel"
+          aria-label="Friday ShopFlow Shopping Assistant chat"
+        >
+          <header className="chatbot-header">
+            <div className="friday-brand">
+              <FridayLogo color="green" size={42} />
+              <div>
+                <strong>FRIDAY</strong>
+                <span>ShopFlow Shopping Assistant</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="chatbot-close"
+              onClick={() => setIsOpen(false)}
+              aria-label="Close chat"
+            >
+              ×
+            </button>
+          </header>
+
+          <div className="chatbot-messages" aria-live="polite">
+            {messages.map((item, index) => (
+              <div
+                key={index}
+                className={`chatbot-message ${item.role}`}
+              >
+                <span className="chatbot-message-label">
+                  {item.role === "user" ? "You" : "Friday"}
+                </span>
+
+                <div className="chatbot-message-content">
+                  {item.role === "assistant" ? (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {(item.content ||
+                        (isSending && index === messages.length - 1
+                          ? "Thinking..."
+                          : "")
+                      ).replace(/\\?<br\s*\/?>/gi, "\n")}
+                    </ReactMarkdown>
+                  ) : (
+                    item.content
+                  )}
+                </div>
+
+                {item.role === "assistant" && (
+                  <ChatbotProductResults products={item.products} />
+                )}
+              </div>
+            ))}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          <form className="chatbot-form" onSubmit={handleSubmit}>
+            <input
+              ref={inputRef}
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              placeholder="Ask Friday..."
+              aria-label="Your message"
+              maxLength={2000}
+              disabled={isSending}
+            />
+
+            <button
+              type="submit"
+              disabled={isSending || !message.trim()}
+            >
+              {isSending ? "..." : "Send"}
+            </button>
+          </form>
+        </section>
+      )}
+
+      <button
+        type="button"
+        className="chatbot-toggle"
+        onClick={() => setIsOpen((previous) => !previous)}
+        aria-expanded={isOpen}
+        aria-label={
+          isOpen
+            ? "Close Friday Shopping Assistant"
+            : "Open Friday Shopping Assistant"
+        }
+      >
+        {isOpen ? "Close ×" : "Chat with AI"}
+      </button>
+    </div>
+  );
+}

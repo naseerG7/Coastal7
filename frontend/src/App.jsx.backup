@@ -1,0 +1,287 @@
+import { BrowserRouter, Outlet, Route, Routes } from "react-router-dom";
+
+// ==============================
+// Public Pages
+// ==============================
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+
+// ==============================
+// Customer Pages
+// ==============================
+import CustomerLogin from "./pages/customer/CustomerLogin";
+import Checkout from "./pages/CheckOut";
+import Orders from "./pages/orders";
+import Profile from "./pages/Profile";
+
+// ==============================
+// Product Pages
+// ==============================
+import Products from "./pages/Products";
+import ProductDetails from "./pages/ProductDetails";
+import Cart from "./pages/cart";
+
+// ==============================
+// Admin Pages
+// ==============================
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminSettings from "./pages/admin/AdminSettings";
+import AdminCustomers from "./pages/admin/AdminCustomers";
+import AdminSellers from "./pages/admin/AdminSellers";
+import AdminProducts from "./pages/admin/AdminProducts";
+import AdminWarehouse from "./pages/admin/AdminWarehouse";
+import AdminOrders from "./pages/admin/AdminOrders";
+import AdminDelivery from "./pages/admin/AdminDelivery";
+import AdminPayments from "./pages/admin/AdminPayments";
+import AdminRefunds from "./pages/admin/AdminRefunds";
+import AdminCancellations from "./pages/admin/AdminCancellations";
+import AdminSupport from "./pages/admin/AdminSupport";
+import AdminReports from "./pages/admin/AdminReports";
+
+// ==============================
+// Admin Layout
+// ==============================
+import AdminLayout from "./components/admin/AdminLayout";
+
+// ==============================
+// Components
+// ==============================
+import ProtectedRoute from "./components/ProtectedRoute";
+import AdminProtectedRoute from "./components/AdminProtectedRoute";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+
+// ==========================================
+// Main Website Layout
+// ==========================================
+
+function Layout() {
+  return (
+    <>
+      <Navbar />
+
+      <main className="container">
+        <Outlet />
+      </main>
+
+      <Footer />
+    </>
+  );
+}
+
+// ==========================================
+// App
+// ==========================================
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+
+        {/* ==========================================
+            MAIN WEBSITE
+        ========================================== */}
+
+        <Route element={<Layout />}>
+
+          {/* PUBLIC ROUTES */}
+
+          <Route
+            path="/"
+            element={<Home />}
+          />
+
+          <Route
+            path="/login"
+            element={<Login />}
+          />
+
+          <Route
+            path="/register"
+            element={<Register />}
+          />
+
+          <Route
+            path="/customer/register"
+            element={<Register />}
+          />
+
+          {/* CUSTOMER LOGIN */}
+
+          <Route
+            path="/customer/login"
+            element={<CustomerLogin />}
+          />
+
+          {/* PRODUCTS */}
+
+          <Route
+            path="/products"
+            element={<Products />}
+          />
+
+          <Route
+            path="/products/:productId"
+            element={<ProductDetails />}
+          />
+
+          {/* CART */}
+
+          <Route
+            path="/cart"
+            element={<Cart />}
+          />
+
+          {/* CUSTOMER PROTECTED ROUTES */}
+
+          <Route element={<ProtectedRoute />}>
+
+            <Route
+              path="/checkout"
+              element={<Checkout />}
+            />
+
+            <Route
+              path="/orders"
+              element={<Orders />}
+            />
+
+            <Route
+              path="/orders/:orderId"
+              element={<Orders />}
+            />
+
+            <Route
+              path="/profile"
+              element={<Profile />}
+            />
+
+          </Route>
+
+        </Route>
+
+        {/* ==========================================
+            ADMIN LOGIN
+        ========================================== */}
+
+        <Route
+          path="/admin/login"
+          element={<AdminLogin />}
+        />
+
+        {/* ==========================================
+            ADMIN PROTECTED AREA
+        ========================================== */}
+
+        <Route element={<AdminProtectedRoute />}>
+
+          {/* ==========================================
+              ADMIN LAYOUT
+              SIDEBAR STAYS VISIBLE
+          ========================================== */}
+
+          <Route element={<AdminLayout />}>
+
+            {/* DASHBOARD */}
+
+            <Route
+              path="/admin/dashboard"
+              element={<AdminDashboard />}
+            />
+
+            {/* CUSTOMERS */}
+
+            <Route
+              path="/admin/customers"
+              element={<AdminCustomers />}
+            />
+
+            {/* SELLERS */}
+
+            <Route
+              path="/admin/sellers"
+              element={<AdminSellers />}
+            />
+
+            {/* PRODUCTS */}
+
+            <Route
+              path="/admin/products"
+              element={<AdminProducts />}
+            />
+
+            {/* WAREHOUSE */}
+
+            <Route
+              path="/admin/warehouse"
+              element={<AdminWarehouse />}
+            />
+
+            {/* ORDERS */}
+
+            <Route
+              path="/admin/orders"
+              element={<AdminOrders />}
+            />
+
+            {/* DELIVERY */}
+
+            <Route
+              path="/admin/delivery"
+              element={<AdminDelivery />}
+            />
+
+            {/* PAYMENTS */}
+
+            <Route
+              path="/admin/payments"
+              element={<AdminPayments />}
+            />
+
+            {/* REFUNDS */}
+
+            <Route
+              path="/admin/refunds"
+              element={<AdminRefunds />}
+            />
+
+            {/* CANCELLATIONS */}
+
+            <Route
+              path="/admin/cancellations"
+              element={<AdminCancellations />}
+            />
+
+            {/* CUSTOMER SERVICE */}
+
+            <Route
+              path="/admin/support"
+              element={<AdminSupport />}
+            />
+
+            {/* REPORTS */}
+
+            <Route
+              path="/admin/reports"
+              element={<AdminReports />}
+            />
+
+            {/* SETTINGS */}
+
+            <Route
+              path="/admin/settings"
+              element={<AdminSettings />}
+            />
+
+          </Route>
+
+        </Route>
+
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;

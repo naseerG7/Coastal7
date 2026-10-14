@@ -6,3 +6,38 @@ node_modules/
 dist/
 uploads/products/*
 !uploads/products/.gitkeep
+
+# Environment files and secrets
+.env.*
+!.env.example
+**/.env.txt
+
+# Python and test caches
+.pytest_cache/
+**/.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Frontend build and test output
+playwright-report/
+test-results/
+coverage/
+
+# Local data and logs
+*.log
+
+# Local databases and generated AI vector-store data
+*.db
+backend/data/chroma/
+
+# Environment files (keep only sanitized examples)
+.env
+.env.*
+!.env.example
+**/.env.txt
+
+# Dependencies and generated frontend output
+node_modules/
+dist/
