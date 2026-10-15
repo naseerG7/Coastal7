@@ -1,4 +1,4 @@
-fastapi
+﻿fastapi
 uvicorn[standard]
 pytest
 httpx
@@ -15,5 +15,5 @@ redis
 reportlab
 groq
 google-genai
-groq
-google-genai
+slowapi
+chromadb
