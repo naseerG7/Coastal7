@@ -1,9 +1,9 @@
-﻿fastapi
+fastapi
 uvicorn[standard]
 pytest
 httpx
 python-dotenv
-sqlalchemy
+sqlalchemy[asyncio]
 asyncpg
 pydantic[email]
 python-multipart
